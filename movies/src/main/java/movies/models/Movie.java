@@ -1,5 +1,6 @@
 package movies.models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,6 +47,10 @@ public class Movie {
     @ManyToOne
     @JoinColumn(name = "director_id")
     private Director director;
+
+    @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<Review> reviews = new ArrayList<>();
 
     public Movie() {}
 

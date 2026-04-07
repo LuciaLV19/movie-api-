@@ -40,9 +40,11 @@ public class GenreController {
     // Get all movies by genre
     @GetMapping("/{id}/movies")
     public ResponseEntity<List<Movie>> getMoviesByGenre(@PathVariable final Long id) {
-        return genreRepository.findById(id)
-                .map(genre -> ResponseEntity.ok(genre.getMovies()))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        if(!genreRepository.existsById(id)){
+            return ResponseEntity.notFound().build();
+        }
+        List<Movie> movies= movieRepository.findByGenresId(id);
+        return ResponseEntity.ok(movies);
     }
 
     // Get all genres by movie

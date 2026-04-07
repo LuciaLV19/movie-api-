@@ -42,10 +42,11 @@ public class ActorController {
     // All movies by actor
     @GetMapping("/{id}/movies")
     public ResponseEntity<List<Movie>> getMoviesByActor(@PathVariable final Long id) {
-        return actorRepository.findById(id)
-                .map(actor -> ResponseEntity.ok(actor.getMovies()))
-                .orElseGet(() -> ResponseEntity.notFound().build());
-
+        if(!actorRepository.existsById(id)){
+            return ResponseEntity.notFound().build();
+        }
+        List<Movie> movies = movieRepository.findByActorsId(id);
+        return ResponseEntity.ok(movies);
     }
 
     // Create actor

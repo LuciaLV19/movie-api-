@@ -3,6 +3,7 @@ package movies.controller;
 import movies.models.Director;
 import movies.models.Movie;
 import movies.repositories.DirectorRepository;
+import movies.repositories.MovieRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,9 @@ public class DirectorController {
 
     @Autowired
     private DirectorRepository directorRepository;
+
+    @Autowired
+    private MovieRepository movieRepository;
 
     // Get all directors
     @GetMapping
@@ -36,9 +40,11 @@ public class DirectorController {
     // Get all movies by director
     @GetMapping("/{id}/movies")
     public ResponseEntity<List<Movie>> getMoviesByDirector(@PathVariable final Long id) {
-        return directorRepository.findById(id)
-                .map(director -> ResponseEntity.ok(director.getMovies()))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        if(!directorRepository.existsById(id)){
+            return ResponseEntity.notFound().build();
+        }
+        List<Movie> movies = movieRepository.findByDirectorId(id);
+        return ResponseEntity.ok(movies);
     }
 
     // Create director

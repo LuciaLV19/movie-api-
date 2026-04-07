@@ -1,7 +1,11 @@
 package movies.controller;
 
+import movies.models.Actor;
 import movies.models.Movie;
+import movies.models.Review;
+import movies.repositories.ActorRepository;
 import movies.repositories.MovieRepository;
+import movies.repositories.ReviewRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +21,12 @@ public class MovieController {
     @Autowired
     private MovieRepository movieRepository;
 
+    @Autowired
+    private ActorRepository actorRepository;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
+
     // Get all movies
     @GetMapping
     public ResponseEntity<List<Movie>> getAllMovies() {
@@ -30,6 +40,26 @@ public class MovieController {
         return movieRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    // Get all actors by movie
+    @GetMapping("/{id}/actors")
+    public ResponseEntity<List<Actor>> getActorsByMovie(@PathVariable Long id) {
+        if (!movieRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        List<Actor> actors = actorRepository.findByMoviesId(id);
+        return ResponseEntity.ok(actors);
+    }
+
+    // Get all reviews by movie
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<List<Review>> getReviewsByMovie(@PathVariable Long id) {
+        if (!movieRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        List<Review> reviews = reviewRepository.findByMovieId(id);
+        return ResponseEntity.ok(reviews);
     }
 
     // Create movie
