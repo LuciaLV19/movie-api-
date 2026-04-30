@@ -1,12 +1,16 @@
 package movies.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import movies.dto.DirectorDTO;
 import movies.dto.MovieDTO;
+import movies.exception.ResourceNotFoundException;
 import movies.mapper.DirectorMapper;
 import movies.mapper.MovieMapper;
 import movies.models.Director;
 import movies.repositories.DirectorRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,82 +20,114 @@ import java.util.List;
 @CrossOrigin
 @RestController
 @RequestMapping("/api/directors")
+@Tag(name = "Directors", description = "API for managing directors and their movies")
 public class DirectorController {
 
-    @Autowired
-    private DirectorMapper directorMapper;
+    private final DirectorMapper directorMapper;
+    private final MovieMapper movieMapper;
+    private final DirectorRepository directorRepository;
 
-    @Autowired
-    private MovieMapper movieMapper;
+    public DirectorController(DirectorMapper directorMapper,
+                              MovieMapper movieMapper,
+                              DirectorRepository directorRepository) {
+        this.directorMapper = directorMapper;
+        this.movieMapper = movieMapper;
+        this.directorRepository = directorRepository;
+    }
 
-    @Autowired
-    private DirectorRepository directorRepository;
-
-    // Get all directors
     @GetMapping
+    @Operation(summary = "Get all directors", description = "Returns all directors in the system")
     public ResponseEntity<List<DirectorDTO>> getAllDirectors() {
-        List<DirectorDTO> directors = directorRepository.findAll().stream()
+
+        List<DirectorDTO> directors = directorRepository.findAll()
+                .stream()
                 .map(directorMapper::toDTO)
                 .toList();
+
         return ResponseEntity.ok(directors);
     }
 
-    // Get director by ID
     @GetMapping("/{id}")
-    public ResponseEntity<DirectorDTO> getDirectorById(@PathVariable final Long id) {
-        return directorRepository.findById(id)
-                .map(directorMapper::toDTO)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    @Operation(summary = "Get director by ID", description = "Returns a specific director by their ID")
+    public ResponseEntity<DirectorDTO> getDirectorById(
+            @Parameter(description = "Director ID")
+            @PathVariable final Long id) {
+
+        Director director = directorRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Director not found with id: " + id)
+                );
+
+        return ResponseEntity.ok(directorMapper.toDTO(director));
     }
 
-    // Get all movies by director
     @GetMapping("/{id}/movies")
-    public ResponseEntity<List<MovieDTO>> getMoviesByDirector(@PathVariable final Long id) {
-        return directorRepository.findById(id)
-                .map(director -> director.getMovies().stream()
-                        .map(movieMapper::toDTO)
-                        .toList())
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    @Operation(summary = "Get movies by director", description = "Returns all movies directed by a specific director")
+    public ResponseEntity<List<MovieDTO>> getMoviesByDirector(
+            @Parameter(description = "Director ID")
+            @PathVariable final Long id) {
+
+        Director director = directorRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Director not found with id: " + id)
+                );
+
+        List<MovieDTO> movies = director.getMovies()
+                .stream()
+                .map(movieMapper::toDTO)
+                .toList();
+
+        return ResponseEntity.ok(movies);
     }
 
-    // Create director
     @PostMapping
-    public ResponseEntity<DirectorDTO> createDirector(@RequestBody DirectorDTO dto) {
+    @Operation(summary = "Create director", description = "Creates a new director")
+    public ResponseEntity<DirectorDTO> createDirector(
+            @Valid @RequestBody final DirectorDTO dto) {
+
         Director director = directorMapper.toEntity(dto);
         Director saved = directorRepository.save(director);
-        return ResponseEntity.status(HttpStatus.CREATED)
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
                 .body(directorMapper.toDTO(saved));
     }
 
-    // Update director
     @PutMapping("/{id}")
+    @Operation(summary = "Update director", description = "Updates an existing director")
     public ResponseEntity<DirectorDTO> updateDirector(
-            @PathVariable Long id,
-            @RequestBody DirectorDTO dto) {
+            @Parameter(description = "Director ID")
+            @PathVariable final Long id,
+            @Valid @RequestBody final DirectorDTO dto) {
 
-        return directorRepository.findById(id)
-                .map(existing -> {
-                    existing.setName(dto.getName());
-                    existing.setBirthDate(dto.getBirthDate());
-                    existing.setNationality(dto.getNationality());
-                    return directorRepository.save(existing);
-                })
-                .map(directorMapper::toDTO)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        Director existing = directorRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Director not found with id: " + id)
+                );
+
+        existing.setName(dto.getName());
+        existing.setBirthDate(dto.getBirthDate());
+        existing.setNationality(dto.getNationality());
+
+        Director updated = directorRepository.save(existing);
+
+        return ResponseEntity.ok(directorMapper.toDTO(updated));
     }
 
-    // Delete director
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteDirector(@PathVariable Long id) {
-        if (!directorRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        Director director = directorRepository.findById(id).get();
+    @Operation(summary = "Delete director", description = "Deletes a director by ID")
+    public ResponseEntity<Void> deleteDirector(
+            @Parameter(description = "Director ID")
+            @PathVariable final Long id) {
+
+        Director director = directorRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Director not found with id: " + id)
+                );
+
         director.getMovies().forEach(movie -> movie.setDirector(null));
         directorRepository.delete(director);
+
         return ResponseEntity.noContent().build();
     }
 }

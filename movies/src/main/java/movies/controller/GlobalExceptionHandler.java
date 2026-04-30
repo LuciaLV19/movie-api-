@@ -1,5 +1,8 @@
 package movies.controller;
 
+import movies.exception.BadRequestException;
+import movies.exception.ImportMovieException;
+import movies.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -13,50 +16,49 @@ import java.util.Map;
 
 /**
  * Global exception handler for the REST API.
- * Intercepts exceptions thrown by controllers and converts them into consistent HTTP responses.
+ * Converts all application exceptions into standardized HTTP responses.
  */
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
     /**
-     * Handles requests to non-existing routes (404).
+     * Handles requests to non-existing endpoints (404).
      */
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<Object> handleNoHandlerFound(NoHandlerFoundException ex) {
-        return buildResponse(HttpStatus.NOT_FOUND, "Route not found", "The requested resource does not exist.");
+
+        return buildResponse(HttpStatus.NOT_FOUND, "Route not found","The requested endpoint does not exist.");
     }
 
     /**
-     * Handles unexpected exceptions globally.
-     * Also filters known Swagger-related errors to return 404 instead of 500.
+     * Handles custom "resource not found" exceptions.
      */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleAllErrors(Exception ex) {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Object> handleResourceNotFound(ResourceNotFoundException ex) {
 
-        String message = ex.getMessage() != null ? ex.getMessage() : "";
-
-        // Allow Swagger-related requests to be treated as NOT FOUND instead of server errors
-        if (message.contains("swagger")
-                || message.contains("api-docs")
-                || message.contains("webjars")
-                || message.contains("No static resource")) {
-
-            return buildResponse(HttpStatus.NOT_FOUND, "Resource not found", message);
-        }
-
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", message);
+        return buildResponse(HttpStatus.NOT_FOUND, "Resource not found", ex.getMessage());
     }
 
     /**
-     * Handles null pointer exceptions, typically caused by missing resources.
+     * Handles bad requests (invalid input or business rules violations).
      */
-    @ExceptionHandler(NullPointerException.class)
-    public ResponseEntity<Object> handleNullPointerException(NullPointerException ex) {
-        return buildResponse(HttpStatus.NOT_FOUND, "Resource not found", "The requested resource does not exist.");
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Object> handleBadRequest(BadRequestException ex) {
+
+        return buildResponse(HttpStatus.BAD_REQUEST, "Bad request", ex.getMessage());
     }
 
     /**
-     * Handles invalid URL parameter types (e.g. expected number but received string).
+     * Handles errors related to external services (e.g. OMDb API).
+     */
+    @ExceptionHandler(ImportMovieException.class)
+    public ResponseEntity<Object> handleImportMovieException(ImportMovieException ex) {
+
+        return buildResponse(HttpStatus.BAD_GATEWAY, "External service error", ex.getMessage());
+    }
+
+    /**
+     * Handles incorrect URL parameter types (e.g. /movies/abc instead of /movies/1).
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<Object> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
@@ -64,32 +66,32 @@ public class GlobalExceptionHandler {
         String message = String.format(
                 "Parameter '%s' must be of type %s",
                 ex.getName(),
-                ex.getRequiredType().getSimpleName()
+                ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "unknown"
         );
 
-        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid URL format", message);
+        return buildResponse(HttpStatus.BAD_REQUEST,"Invalid URL parameter", message);
     }
 
     /**
-     * Handles invalid business logic inputs (e.g. negative values, invalid states).
+     * Fallback handler for all unexpected exceptions.
      */
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Object> handleIllegalArgs(IllegalArgumentException ex) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "Invalid data", ex.getMessage());
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Object> handleAllExceptions(Exception ex) {
+
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error",ex.getMessage());
     }
 
     /**
      * Builds a standardized API error response.
-     * Ensures all errors follow a consistent structure across the application.
      */
     private ResponseEntity<Object> buildResponse(HttpStatus status, String error, String message) {
 
         Map<String, Object> body = new LinkedHashMap<>();
+
         body.put("timestamp", LocalDateTime.now());
         body.put("status", status.value());
         body.put("error", error);
         body.put("message", message);
-        body.put("error_count", 1);
 
         return new ResponseEntity<>(body, status);
     }

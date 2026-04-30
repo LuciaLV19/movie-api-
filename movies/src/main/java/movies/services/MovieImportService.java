@@ -37,7 +37,8 @@ public class MovieImportService {
 
     public MovieDTO importFromOMDb(String title) {
         String url = "http://www.omdbapi.com/?t=" + title + "&apikey=" + apiKey;
-        Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> response = (Map<String, Object>) restTemplate.getForObject(url, Map.class);
 
         if (response == null || !"True".equalsIgnoreCase((String) response.get("Response"))) {
             throw new ImportMovieException("Movie not found in OMDb: " + title);
