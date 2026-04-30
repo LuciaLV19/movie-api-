@@ -1,7 +1,14 @@
 package movies.models;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Entity
 @Table(name = "reviews")
 public class Review {
@@ -9,11 +16,14 @@ public class Review {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, length = 100)
     private String comment;
+
     private Double rating;
 
     @ManyToOne
     @JoinColumn(name = "movie_id")
+    @JsonBackReference
     private Movie movie;
 
     @ManyToOne
@@ -30,38 +40,4 @@ public class Review {
         this.user = user;
     }
 
-    public Long getId() {
-        return id;
-    }
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-    public void setComment(String comment) {
-        this.comment = comment;
-    }
-
-    public Double getRating() {
-        return rating;
-    }
-    public void setRating(Double rating) {
-        this.rating = rating;
-    }
-
-    public Movie getMovie() {
-        return movie;
-    }
-    public void setMovie(Movie movie) {
-        this.movie = movie;
-    }
-
-    public User getUser() {
-        return user;
-    }
-    public void setUser(User user) {
-        this.user = user;
-    }
 }

@@ -1,11 +1,17 @@
 package movies.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
+@Getter
+@Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Entity
 @Table (name = "genres")
 public class Genre {
@@ -18,33 +24,12 @@ public class Genre {
 
     @ManyToMany(mappedBy = "genres")
     @JsonIgnore
-    private List<Movie> movies = new ArrayList<>();
+    private Set<Movie> movies = new HashSet<>();
 
     public Genre() {}
 
     public Genre (String name) {
         this.name = name;
-    }
-
-    public Long getId() {
-        return id;
-    }
-    public void setId(final Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-    public void setName(final String name) {
-        this.name = name;
-    }
-
-    public List<Movie> getMovies() {
-        return movies;
-    }
-    public void setMovies(final List<Movie> movies) {
-        this.movies = movies;
     }
 
     @Override

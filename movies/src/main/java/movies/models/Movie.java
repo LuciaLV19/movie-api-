@@ -1,10 +1,18 @@
 package movies.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import java.util.ArrayList;
-import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.util.HashSet;
+import java.util.Set;
+
+@Getter
+@Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Entity
 @Table(name = "movies")
 public class Movie {
@@ -19,11 +27,11 @@ public class Movie {
     @Column(length = 1000)
     private String description;
 
-    private int year;
+    private Integer year;
 
-    private int votes;
+    private Integer votes = 0;
 
-    private double rating;
+    private Double rating = 0.0;
 
     @Column(length = 255)
     private String image;
@@ -34,7 +42,7 @@ public class Movie {
             joinColumns = @JoinColumn(name = "movie_id"),
             inverseJoinColumns = @JoinColumn(name = "actor_id")
     )
-    private List<Actor> actors = new ArrayList<>();
+    private Set<Actor> actors = new HashSet<>();
 
     @ManyToMany
     @JoinTable(
@@ -42,7 +50,7 @@ public class Movie {
             joinColumns = @JoinColumn(name = "movie_id"),
             inverseJoinColumns = @JoinColumn(name = "genre_id")
     )
-    private List<Genre> genres = new ArrayList<>();
+    private Set<Genre> genres = new HashSet<>();
 
     @ManyToOne
     @JoinColumn(name = "director_id")
@@ -50,11 +58,12 @@ public class Movie {
 
     @OneToMany(mappedBy = "movie", cascade = CascadeType.ALL)
     @JsonIgnore
-    private List<Review> reviews = new ArrayList<>();
+    @JsonManagedReference
+    private Set<Review> reviews = new HashSet<>();
 
     public Movie() {}
 
-    public Movie(String title, String description, int year, int votes, double rating, String image) {
+    public Movie(String title, String description, Integer year, Integer votes, Double rating, String image) {
         this.title = title;
         this.description = description;
         this.year = year;
@@ -63,35 +72,11 @@ public class Movie {
         this.image = image;
     }
 
-    public Long getId() { return id; }
-    public void setId(final Long id) { this.id = id; }
-
-    public String getTitle() { return title; }
-    public void setTitle(final String title) { this.title = title; }
-
-    public String getDescription() { return description; }
-    public void setDescription(final String description) { this.description = description; }
-
-    public int getYear() { return year; }
-    public void setYear(final int year) { this.year = year; }
-
-    public int getVotes() { return votes; }
-    public void setVotes(final int votes) { this.votes = votes; }
-
-    public double getRating() { return rating; }
-    public void setRating(final double rating) { this.rating = rating; }
-
-    public String getImage() { return image; }
-    public void setImage(final String image) { this.image = image; }
-
-    public List<Actor> getActors() { return actors; }
-    public void setActors(final List<Actor> actors) { this.actors = actors; }
-
-    public List<Genre> getGenres() { return genres; }
-    public void setGenres(final List<Genre> genres) { this.genres = genres; }
-
-    public Director getDirector() { return director; }
-    public void setDirector(final Director director) { this.director = director; }
+    public void calculateRating(Double newRating){
+        Double totalPoints = (this.rating * this.votes) + newRating;
+        this.votes++;
+        this.rating = totalPoints / this.votes;
+    }
 
     @Override
     public String toString() {

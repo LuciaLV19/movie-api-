@@ -1,59 +1,82 @@
 package movies.controller;
 
+import movies.dto.ActorDTO;
+import movies.dto.MovieDTO;
+import movies.mapper.ActorMapper;
+import movies.mapper.MovieMapper;
 import movies.models.Actor;
-import movies.models.Movie;
 import movies.repositories.ActorRepository;
-import movies.repositories.MovieRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @CrossOrigin
 @RestController
 @RequestMapping("/api/actors")
 public class ActorController {
+    @Autowired
+    private ActorMapper actorMapper;
+
+    @Autowired
+    private MovieMapper movieMapper;
 
     @Autowired
     private ActorRepository actorRepository;
 
-    @Autowired
-    private MovieRepository movieRepository;
-
     // Get all actors
     @GetMapping
-    public ResponseEntity<List<Actor>> getAllActors() {
-        List<Actor> actors = actorRepository.findAll();
+    public ResponseEntity<List<ActorDTO>> getAllActors() {
+        List<ActorDTO> actors = actorRepository.findAll().stream()
+                .map(actorMapper::toDTO)
+                .toList();
         return ResponseEntity.ok(actors);
     }
 
     // Get actor by ID
     @GetMapping("/{id}")
-    public ResponseEntity<Actor> getActorById(@PathVariable final Long id) {
-        Optional<Actor> actor = actorRepository.findById(id);
-        return actor.map(ResponseEntity::ok)
+    public ResponseEntity<ActorDTO> getActorById(@PathVariable final Long id) {
+        return actorRepository.findById(id)
+                .map(actorMapper::toDTO)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // All movies by actor
     @GetMapping("/{id}/movies")
-    public ResponseEntity<List<Movie>> getMoviesByActor(@PathVariable final Long id) {
-        if(!actorRepository.existsById(id)){
-            return ResponseEntity.notFound().build();
-        }
-        List<Movie> movies = movieRepository.findByActorsId(id);
-        return ResponseEntity.ok(movies);
+    public ResponseEntity<List<MovieDTO>> getMoviesByActor(@PathVariable final Long id) {
+        return actorRepository.findById(id)
+                .map(actor -> actor.getMovies().stream()
+                        .map(movieMapper::toDTO)
+                        .toList())
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // Create actor
     @PostMapping
-    public ResponseEntity<Actor> createActor(@RequestBody final Actor actor) {
-        Actor savedActor = actorRepository.save(actor);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedActor);
+    public ResponseEntity<ActorDTO> createActor(@RequestBody ActorDTO dto) {
+        Actor actor = actorMapper.toEntity(dto);
+        Actor saved = actorRepository.save(actor);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(actorMapper.toDTO(saved));
+    }
+
+    // Update actor
+    @PutMapping("/{id}")
+    public ResponseEntity<ActorDTO> updateActor(@PathVariable Long id, @RequestBody ActorDTO dto) {
+        return actorRepository.findById(id)
+                .map(existing -> {
+                    existing.setName(dto.getName());
+                    existing.setBirthDate(dto.getBirthDate());
+                    existing.setNationality(dto.getNationality());
+                    return actorRepository.save(existing);
+                })
+                .map(actorMapper::toDTO)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // Delete actor
@@ -64,16 +87,5 @@ public class ActorController {
         }
         actorRepository.deleteById(id);
         return ResponseEntity.noContent().build();
-    }
-
-    // Update actor
-    @PutMapping("/{id}")
-    public ResponseEntity<Actor> updateActor(@PathVariable final Long id, @RequestBody final Actor updatedActor) {
-        if (!actorRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        updatedActor.setId(id);
-        Actor savedActor = actorRepository.save(updatedActor);
-        return ResponseEntity.ok(savedActor);
     }
 }

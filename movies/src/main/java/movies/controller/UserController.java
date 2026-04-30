@@ -1,5 +1,8 @@
 package movies.controller;
 
+import movies.dto.UserCreateDTO;
+import movies.dto.UserDTO;
+import movies.mapper.UserMapper;
 import movies.models.User;
 import movies.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,46 +16,52 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+    @Autowired
+    private UserMapper userMapper;
 
     @Autowired
     private UserRepository userRepository;
 
     // Get all users
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        return ResponseEntity.ok(userRepository.findAll());
+    public ResponseEntity<List<UserDTO>> getAllUsers() {
+        return ResponseEntity.ok(userRepository.findAll().stream()
+                .map(userMapper::toDTO)
+                .toList());
     }
 
     // Get user by id
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
         return userRepository.findById(id)
+                .map(userMapper::toDTO)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // Create user (register)
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
-        // En una app real, aquí deberías cifrar la contraseña antes de guardar
-        User savedUser = userRepository.save(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+    public ResponseEntity<UserDTO> createUser(@RequestBody UserCreateDTO dto) {
+        User user = userMapper.toEntity(dto);
+        User saved = userRepository.save(user);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(userMapper.toDTO(saved));
     }
-
     // Update user account
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User updatedUser) {
+    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UserCreateDTO dto) {
         return userRepository.findById(id)
-                .map(existingUser -> {
-                    existingUser.setUsername(updatedUser.getUsername());
-                    existingUser.setEmail(updatedUser.getEmail());
-                    // Solo actualizamos el password si viene en el JSON
-                    if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
-                        existingUser.setPassword(updatedUser.getPassword());
+                .map(existing -> {
+                    existing.setUsername(dto.getUsername());
+                    existing.setEmail(dto.getEmail());
+                    if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+                        existing.setPassword(dto.getPassword());
                     }
-                    User savedUser = userRepository.save(existingUser);
-                    return ResponseEntity.ok(savedUser);
+                    return userRepository.save(existing);
                 })
+                .map(userMapper::toDTO)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 

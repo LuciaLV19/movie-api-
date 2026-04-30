@@ -1,5 +1,9 @@
 package movies.controller;
 
+import movies.dto.ReviewDTO;
+import movies.mapper.MovieMapper;
+import movies.mapper.ReviewMapper;
+import movies.models.Movie;
 import movies.models.Review;
 import movies.repositories.MovieRepository;
 import movies.repositories.ReviewRepository;
@@ -17,6 +21,12 @@ import java.util.List;
 public class ReviewController {
 
     @Autowired
+    private ReviewMapper reviewMapper;
+
+    @Autowired
+    private MovieMapper movieMapper;
+
+    @Autowired
     private ReviewRepository reviewRepository;
 
     @Autowired
@@ -26,51 +36,57 @@ public class ReviewController {
     private MovieRepository movieRepository;
 
     @GetMapping
-    public ResponseEntity<List<Review>> getAllReviews (){
-        List<Review> reviews = reviewRepository.findAll();
+    public ResponseEntity<List<ReviewDTO>> getAllReviews (){
+        List<ReviewDTO> reviews = reviewRepository.findAll().stream()
+                .map(reviewMapper::toDTO)
+                .toList();
         return ResponseEntity.ok(reviews);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Review> getReviewById(@PathVariable final Long id) {
+    public ResponseEntity<ReviewDTO> getReviewById(@PathVariable final Long id) {
         return reviewRepository.findById(id)
+                .map(reviewMapper::toDTO)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/movie/{movieId}")
-    public ResponseEntity<List<Review>> getReviewsByMovie(@PathVariable Long movieId) {
-        if (!movieRepository.existsById(movieId)) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(reviewRepository.findByMovieId(movieId));
+    public ResponseEntity<List<ReviewDTO>> getReviewsByMovie(@PathVariable Long movieId) {
+        List<ReviewDTO> reviews = reviewRepository.findByMovieId(movieId).stream()
+                .map(reviewMapper::toDTO)
+                .toList();
+        return ResponseEntity.ok(reviews);
     }
 
     // Create review
     @PostMapping
-    public ResponseEntity<Review> createReview(@RequestBody Review review) {
-        if (review.getMovie() == null || !movieRepository.existsById(review.getMovie().getId())) {
-            return ResponseEntity.badRequest().build();
-        }
-        if (review.getUser() == null || !userRepository.existsById(review.getUser().getId())) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        Review savedReview = reviewRepository.save(review);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedReview);
+    public ResponseEntity<ReviewDTO> createReview(@RequestBody ReviewDTO dto) {
+        Review review = new Review();
+        review.setComment(dto.getComment());
+        review.setRating(dto.getRating());
+        Movie movie = movieRepository.findById(dto.getMovieId())
+                .orElseThrow(() -> new RuntimeException("Movie not found"));
+        review.setMovie(movie);
+        Review saved = reviewRepository.save(review);
+        // actualizar rating
+        movie.calculateRating(saved.getRating());
+        movieRepository.save(movie);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(reviewMapper.toDTO(saved));
     }
 
     // Update review
     @PutMapping("/{id}")
-    public ResponseEntity<Review> updateReview(@PathVariable final Long id, @RequestBody final Review updatedReview) {
+    public ResponseEntity<ReviewDTO> updateReview(@PathVariable Long id, @RequestBody ReviewDTO dto) {
         return reviewRepository.findById(id)
-                .map(existingReview -> {
-                    existingReview.setComment(updatedReview.getComment());
-                    existingReview.setRating(updatedReview.getRating());
-
-                    Review savedReview = reviewRepository.save(existingReview);
-                    return ResponseEntity.ok(savedReview);
+                .map(existing -> {
+                    existing.setComment(dto.getComment());
+                    existing.setRating(dto.getRating());
+                    return reviewRepository.save(existing);
                 })
+                .map(reviewMapper::toDTO)
+                .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 

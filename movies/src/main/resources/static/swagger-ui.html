@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Movies API Documentation</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        window.addEventListener('load', function() {
+            var paths = [
+                '/swagger-ui/index.html',
+                '/swagger-ui/',
+                '/v3/api-docs'
+            ];
+
+            for (var i = 0; i < paths.length; i++) {
+                fetch(paths[i], {method: 'HEAD'})
+                    .then(function(response) {
+                        if (response.ok || response.status === 405) {
+                            window.location.href = paths[i];
+                        }
+                    })
+                    .catch(function(err) {});
+            }
+        });
+    </script>
+</head>
+<body>
+    <h1>Movies API</h1>
+    <p>Buscando documentación de Swagger...</p>
+    <p>Si no se redirige, intenta estos enlaces:</p>
+    <ul>
+        <li><a href="/swagger-ui/index.html">Swagger UI</a></li>
+        <li><a href="/v3/api-docs">API Docs JSON</a></li>
+    </ul>
+</body>
+</html>
+

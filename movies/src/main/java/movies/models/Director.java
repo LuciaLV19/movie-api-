@@ -1,12 +1,18 @@
 package movies.models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
+@Getter
+@Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Entity
 @Table (name = "directors")
 public class Director {
@@ -25,7 +31,7 @@ public class Director {
 
     @OneToMany(mappedBy = "director")
     @JsonIgnore
-    private List<Movie> movies = new ArrayList<>();
+    private Set<Movie> movies = new HashSet<>();
 
     public Director() {}
 
@@ -35,42 +41,8 @@ public class Director {
         this.nationality = nationality;
     }
 
-    public Long getId() {
-        return id;
+    public Director(String directorName) {
     }
-    public void setId(final Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-    public void setName(final String name) {
-        this.name = name;
-    }
-
-    public LocalDate getBirthDate() {
-        return birthDate;
-    }
-    public void setBirthDate(final LocalDate birthDate) {
-        this.birthDate = birthDate;
-    }
-
-    public String getNationality() {
-        return nationality;
-    }
-    public void setNationality(final String nationality) {
-        this.nationality = nationality;
-    }
-
-
-    public List<Movie> getMovies() {
-        return movies;
-    }
-    public void setMovies(final List<Movie> movies) {
-        this.movies = movies;
-    }
-
 
     @Override
     public String toString() {
